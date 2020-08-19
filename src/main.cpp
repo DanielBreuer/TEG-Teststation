@@ -61,7 +61,7 @@ auslesen der zyklusanzahl aus der sd karte
 
 //#include <Adafruit_Sensor.h>
 
-//Constructor:
+//create Class Objects:
 File sdcard_file; //SD card c
 //oled 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
@@ -291,19 +291,23 @@ void printToOled(const char *name, int value, int unit, int colum) {//Ausgabe au
 
 // the loop function runs over and over again until power down or reset
 void loop() {
-  double temperatureHot = m_temperature(HOT);
-  Serial.println(temperatureHot);
-  delay(500);
-  //int voltageTEG = m_voltage(16);
-  printToOled("TempH:",temperatureHot,1,1);
-  display.clearDisplay();
 
-  for(int16_t i=0; i<display.height()/2; i+=2) {
-    display.drawRect(i, i, display.width()-2*i, display.height()-2*i, WHITE);
-    display.display(); // Update screen with each newly-drawn rectangle
-    delay(1);
-  }
-  display.display();
-  //printToOled("Volt:",voltageTEG,0,2);
+	//auslesen von Temperatur
+	double temperatureHot = m_temperature(HOT);
+  	Serial.println(temperatureHot);
+  	delay(500);
+  	//int voltageTEG = m_voltage(16);
+	
+  	//Oled Testing
+  	printToOled("TempH:",temperatureHot,1,1);
+  	display.clearDisplay();
+
+  	for(int16_t i=0; i<display.height()/2; i+=2) {
+  	  display.drawRect(i, i, display.width()-2*i, display.height()-2*i, WHITE);
+  	  display.display(); // Update screen with each newly-drawn rectangle
+  	  delay(1);
+  	}
+  	display.display();
+  	//printToOled("Volt:",voltageTEG,0,2);
   
 }
