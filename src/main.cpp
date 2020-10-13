@@ -51,13 +51,13 @@ auslesen der zyklusanzahl aus der sd karte
 //SD_Card Module
 #include <SD.h>
 
-//temperature Module
-#include "max6675.h"
-//oled module
-#include <SPI.h>
-#include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
+ //temperature Module
+ #include "max6675.h"
+ //oled module
+ #include <SPI.h>
+ #include <Wire.h>
+ #include <Adafruit_GFX.h>
+ #include <Adafruit_SSD1306.h>
 
 //#include <Adafruit_Sensor.h>
 
@@ -165,7 +165,8 @@ void writeToSD(const char *dataName, int data1, int data2, int data3){ //Funktio
 
 	if (sdcard_file) { //If the file is found
 		Serial.println("Writing to file is under process");
-		dataString += String(data1);
+		dataString += String(dataName);
+		dataString += ": ";
 		dataString += String(data2);
       	dataString += ",";
 		dataString += String(data2);
@@ -185,11 +186,19 @@ int getCycleCount() {
 	if (sdcard_file) {
 		Serial.println("Reading from the file");
 		while (sdcard_file.available()) {
+			sdcard_file.write(123);
+			sdcard_file.write(124);
+			Serial.begin(9600);
+			Serial.write(sdcard_file.read());
+
+
+		
 			//letzte zeile auslesen:
 			//siehe https://forum.arduino.cc/index.php?topic=95303.0
 			//muss ergänzt werden!!
+			//sdcard_file.readStringUntil(NULL);
+			//string cycle = sdcard_file.read();
 			
-		
 			//Serial.write(sdcard_file.read());
 		}
 		sdcard_file.close();
