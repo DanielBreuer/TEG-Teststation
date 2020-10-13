@@ -190,6 +190,7 @@ int getCycleCount() {
 			sdcard_file.write(124);
 			Serial.begin(9600);
 			Serial.write(sdcard_file.read());
+			//this is for test purposes only
 
 
 		
