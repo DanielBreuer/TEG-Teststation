@@ -25,23 +25,25 @@ auslesen der zyklusanzahl aus der sd karte
 //Datalogging
 #define PAUSE 60000//60 Sec zwischen jeder messung
 #define FileName "tlogg.txt" //Format 8.4 beachten, zeichenlänge von 8 im Dateil-Titel und 4 in der dateinenedung nicht überschreiten
-#define dataSeparation  ";"
+#define dataSeparation  ";" //separierung der datensätze, für di verarbeitung in excel 
 //SD Card
-#define SD_CARD 10			//definition des arduino pin, an dem das SD-Karten Modul angeschlosssen ist
+#define SD_CARD 53			//definition des arduino pin, an dem das SD-Karten Modul angeschlosssen ist
 //U/I-Sensors
-#define VOLTAGE_TEG 1		//definition des arduino pin, an dem das Modul angeschlosssen ist, welches die spannung am TEG misst
-#define VOLTAGE_HEATING 1	//definition des arduino pin, an dem das Modul angeschlosssen ist, welches die spannung am Heizelement misst
-#define CURRENT_TEG 1		//definition des arduino pin, an dem das Modul angeschlosssen ist, welches den Strom am TEG misst
-#define CURRENT_HEATING 1	//definition des arduino pin, an dem das Modul angeschlosssen ist, welches den Strom am Heizelement misst
+#define VOLTAGE_TEG A7		//definition des arduino pin, an dem das Modul angeschlosssen ist, welches die spannung am TEG misst
+#define VOLTAGE_FAN A6	//definition des arduino pin, an dem das Modul angeschlosssen ist, welches die spannung am Heizelement misst
+#define CURRENT_TEG A5		//definition des arduino pin, an dem das Modul angeschlosssen ist, welches den Strom am TEG misst
+#define CURRENT_FAN A4	//definition des arduino pin, an dem das Modul angeschlosssen ist, welches den Strom am Heizelement misst
+
+
 //thermocouple pin defines
-#define TEMP_HOT_SCK 22		//definition des arduino pin, an dem der SCK pin des Modul angeschlosssen ist, welches die Temperatur auf der Heißen Seite misst
-#define TEMP_HOT_CS 23		//definition des arduino pin, an dem der CS pin des Modul angeschlosssen ist, welches die Temperatur auf der Heißen Seite misst
-#define TEMP_HOT_SO 24		//definition des arduino pin, an dem der SO pin des Modul angeschlosssen ist, welches die Temperatur auf der Heißen Seite misst
-#define TEMP_COLD_SCK 1		//definition des ersten arduino pin, an dem der SCK pin des Modul angeschlosssen ist, welches die Temperatur auf der Kalten Seite misst
-#define TEMP_COLD_CS 1		//definition des ersten arduino pin, an dem der CS pin des Modul angeschlosssen ist, welches die Temperatur auf der Kalten Seite misst
-#define TEMP_COLD_SO 1		//definition des ersten arduino pin, an dem der SO pin des Modul angeschlosssen ist, welches die Temperatur auf der Kalten Seite misst
+#define TEMP_HOT_SCK 30		//definition des arduino pin, an dem der SCK pin des Modul angeschlosssen ist, welches die Temperatur auf der Heißen Seite misst
+#define TEMP_HOT_CS 31		//definition des arduino pin, an dem der CS pin des Modul angeschlosssen ist, welches die Temperatur auf der Heißen Seite misst
+#define TEMP_HOT_SO 32		//definition des arduino pin, an dem der SO pin des Modul angeschlosssen ist, welches die Temperatur auf der Heißen Seite misst
+#define TEMP_COLD_SCK 40		//definition des ersten arduino pin, an dem der SCK pin des Modul angeschlosssen ist, welches die Temperatur auf der Kalten Seite misst
+#define TEMP_COLD_CS 41		//definition des ersten arduino pin, an dem der CS pin des Modul angeschlosssen ist, welches die Temperatur auf der Kalten Seite misst
+#define TEMP_COLD_SO 42		//definition des ersten arduino pin, an dem der SO pin des Modul angeschlosssen ist, welches die Temperatur auf der Kalten Seite misst
 //define type for function call
-#define Cold 0
+#define COLD 0
 #define HOT 1
 #define DIFF 2
 //Oled pin defines
@@ -121,6 +123,10 @@ void setup() {
 	display.clearDisplay();
 	display.setTextColor(WHITE);
 
+	//Sensors:
+
+	PinMode(CURRENT_TEG, INPUT);
+	PinMode(CURRENT_FAN, INPUT);
 
 	return;
 }
@@ -128,7 +134,7 @@ void setup() {
 float m_voltage(int pin) {//Funktion zum messen von Spannung von einem Modul an einem ausgewählten pin
 	//Quelle: https://www.electronicshub.org/interfacing-voltage-sensor-with-arduino/ am 14.8.2020
 	value = analogRead(pin);
-	voltage = (value * 5.0) / 1024.0 * (R2 / (R1 + R2));
+	voltage = (value * 5.0) / (1024.0 * (R2 / (R1 + R2)));
 	 
 	return voltage;
 
@@ -166,7 +172,7 @@ float m_temperature(int type) {//Funktion zum auslesen der temperatur von einem 
 }
 
 
-void writeToSD(const char *dataName, float data1, float data2, float data3, float data4, float data5){ //Funktion zum Schreiben von Werten (Data1,...) auf die SD-Karte auf eine Datei (dataName) 
+void writeToSD(const char *dataName, float data1, float data2, float data3, float data4, float data5, float data6){ //Funktion zum Schreiben von Werten (Data1,...) auf die SD-Karte auf eine Datei (dataName) 
 	//Quelle: https://electronicshobbyists.com/arduino-sd-card-shield-tutorial-arduino-data-logger/ am 14.8.2020
 	 
 	sdcard_file = SD.open(dataName, FILE_WRITE); //Looking for the data.txt in SD card
@@ -186,6 +192,8 @@ void writeToSD(const char *dataName, float data1, float data2, float data3, floa
 		dataString += String(data4);
 		dataString += dataSeparation;
 		dataString += String(data5);
+		dataString += dataSeparation;
+		dataString += String(data6);
 		dataString += "\n";
 		sdcard_file.println(dataString); //Schreiben der beiden Datenreihen auf SD-Karte mit einem Bestrich als Seperator
 		sdcard_file.close(); //Closing the file
@@ -331,11 +339,16 @@ void printToOled(const char *name, int value, int unit, int colum) {//Ausgabe au
 // the loop function runs over and over again until power down or reset
 void loop() {
 
-float temperatur = m_temperature(HOT);
-float zeit = millis()/(60000.0);
-writeToSD("tlogg.txt",temperatur,zeit,0);
-Serial.println(temperatur,3);
-Serial.println(zeit,3);
+float temperatureHot = m_temperature(HOT);
+float temperatureCold = m_temperature(COLD);
+float voltageTeg = m_voltage(VOLTAGE_TEG);
+float voltageFan = m_voltage(VOLTAGE_FAN);
+float currentTeg = m_current(CURRENT_TEG);
+float currentFan = m_current(CURRENT_FAN);
+//float zeit = millis()/(60000.0);
+writeToSD("tlogg.txt",temperatureHot, TemperatureCold, voltageTeg, voltageFan, currentTeg, currentFan);
+Serial.println(temperatureHOT,3);
+
 
 delay(PAUSE);
 
