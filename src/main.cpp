@@ -21,15 +21,22 @@ auslesen der zyklusanzahl aus der sd karte
 */
 
 //defines:
+
+//Datalogging
+#define PAUSE 60000//60 Sec zwischen jeder messung
+#define FileName "tlogg.txt" //Format 8.4 beachten, zeichenlänge von 8 im Dateil-Titel und 4 in der dateinenedung nicht überschreiten
+#define dataSeparation  ";"
+//SD Card
 #define SD_CARD 10			//definition des arduino pin, an dem das SD-Karten Modul angeschlosssen ist
+//U/I-Sensors
 #define VOLTAGE_TEG 1		//definition des arduino pin, an dem das Modul angeschlosssen ist, welches die spannung am TEG misst
 #define VOLTAGE_HEATING 1	//definition des arduino pin, an dem das Modul angeschlosssen ist, welches die spannung am Heizelement misst
 #define CURRENT_TEG 1		//definition des arduino pin, an dem das Modul angeschlosssen ist, welches den Strom am TEG misst
 #define CURRENT_HEATING 1	//definition des arduino pin, an dem das Modul angeschlosssen ist, welches den Strom am Heizelement misst
 //thermocouple pin defines
-#define TEMP_HOT_SCK 2		//definition des arduino pin, an dem der SCK pin des Modul angeschlosssen ist, welches die Temperatur auf der Heißen Seite misst
-#define TEMP_HOT_CS 3		//definition des arduino pin, an dem der CS pin des Modul angeschlosssen ist, welches die Temperatur auf der Heißen Seite misst
-#define TEMP_HOT_SO 4		//definition des arduino pin, an dem der SO pin des Modul angeschlosssen ist, welches die Temperatur auf der Heißen Seite misst
+#define TEMP_HOT_SCK 22		//definition des arduino pin, an dem der SCK pin des Modul angeschlosssen ist, welches die Temperatur auf der Heißen Seite misst
+#define TEMP_HOT_CS 23		//definition des arduino pin, an dem der CS pin des Modul angeschlosssen ist, welches die Temperatur auf der Heißen Seite misst
+#define TEMP_HOT_SO 24		//definition des arduino pin, an dem der SO pin des Modul angeschlosssen ist, welches die Temperatur auf der Heißen Seite misst
 #define TEMP_COLD_SCK 1		//definition des ersten arduino pin, an dem der SCK pin des Modul angeschlosssen ist, welches die Temperatur auf der Kalten Seite misst
 #define TEMP_COLD_CS 1		//definition des ersten arduino pin, an dem der CS pin des Modul angeschlosssen ist, welches die Temperatur auf der Kalten Seite misst
 #define TEMP_COLD_SO 1		//definition des ersten arduino pin, an dem der SO pin des Modul angeschlosssen ist, welches die Temperatur auf der Kalten Seite misst
@@ -39,13 +46,13 @@ auslesen der zyklusanzahl aus der sd karte
 #define DIFF 2
 //Oled pin defines
 #define OLED_RESET -1
-
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 
 
 //Includes:
 #include <Arduino.h>
+#include <string.h>
 
 #include <SPI.h> //for sd card module, oled module 
 //SD_Card Module
@@ -97,7 +104,7 @@ String dataString = "";
 void setup() {
 	Serial.begin(9600); //Setting baudrate at 9600
 
-	//SD_Card Modul inizialisation
+	//SD_Card Modul setup
 	pinMode(SD_CARD, OUTPUT);//declaring SD-card pin as output pin
 	if (SD.begin())
 	{
@@ -159,27 +166,45 @@ float m_temperature(int type) {//Funktion zum auslesen der temperatur von einem 
 }
 
 
-void writeToSD(const char *dataName, int data1, int data2, int data3){ //Funktion zum Schreiben von Werten (Data1,...) auf die SD-Karte auf eine Datei (dataName) 
+void writeToSD(const char *dataName, float data1, float data2, float data3, float data4, float data5){ //Funktion zum Schreiben von Werten (Data1,...) auf die SD-Karte auf eine Datei (dataName) 
 	//Quelle: https://electronicshobbyists.com/arduino-sd-card-shield-tutorial-arduino-data-logger/ am 14.8.2020
+	 
 	sdcard_file = SD.open(dataName, FILE_WRITE); //Looking for the data.txt in SD card
-
 	if (sdcard_file) { //If the file is found
 		Serial.println("Writing to file is under process");
-		dataString += String(dataName);
-		dataString += ": ";
+		
+		float timeSinceRestart = millis();
+
+		dataString += String(timeSinceRestart);
+      	dataString += dataSeparation;
+		dataString += String(data1);
+      	dataString += dataSeparation;
 		dataString += String(data2);
-      	dataString += ",";
-		dataString += String(data2);
-		sdcard_file.println(dataString ); //Schreiben der beiden Datenreihen auf SD-Karte mit einem Bestrich als Seperator
+		dataString += dataSeparation;
+		dataString += String(data3);
+		dataString += dataSeparation;
+		dataString += String(data4);
+		dataString += dataSeparation;
+		dataString += String(data5);
+		dataString += "\n";
+		sdcard_file.println(dataString); //Schreiben der beiden Datenreihen auf SD-Karte mit einem Bestrich als Seperator
 		sdcard_file.close(); //Closing the file
-		Serial.println("Done");
+		Serial.println("Done:" + dataString);
+		dataString = "";
 	}
-	else {
-		Serial.println("Failed to open the file");
-	}
-}
 
 int getCycleCount() {
+	 sdcard_file = SD.open("data.txt");
+  if (sdcard_file) {
+  Serial.println("Reading from the file");
+  while (sdcard_file.available()) {
+  Serial.write(sdcard_file.read());
+  }
+  sdcard_file.close();
+  }
+  else {
+  Serial.println("Failed to open the file");
+  }
 	//Quelle: https://electronicshobbyists.com/arduino-sd-card-shield-tutorial-arduino-data-logger/ am 14.8.2020
 	int cycleCount = 0;
 	sdcard_file = SD.open("Zyklus.txt");
@@ -188,10 +213,14 @@ int getCycleCount() {
 		while (sdcard_file.available()) {
 			sdcard_file.write(123);
 			sdcard_file.write(124);
+			
 			Serial.begin(9600);
 			Serial.write(sdcard_file.read());
 			//this is for test purposes only
+			char[] cycle;
+			while(cycle = sdcard_file.read()){
 
+			}
 
 		
 			//letzte zeile auslesen:
@@ -200,7 +229,7 @@ int getCycleCount() {
 			//sdcard_file.readStringUntil(NULL);
 			//string cycle = sdcard_file.read();
 			
-			//Serial.write(sdcard_file.read());
+			//Serial.write(sdcard_file.read())
 		}
 		sdcard_file.close();
 	}
@@ -302,22 +331,30 @@ void printToOled(const char *name, int value, int unit, int colum) {//Ausgabe au
 // the loop function runs over and over again until power down or reset
 void loop() {
 
-	//auslesen von Temperatur
-	double temperatureHot = m_temperature(HOT);
-  	Serial.println(temperatureHot);
-  	delay(500);
-  	//int voltageTEG = m_voltage(16);
-	
-  	//Oled Testing
-  	printToOled("TempH:",temperatureHot,1,1);
-  	display.clearDisplay();
+float temperatur = m_temperature(HOT);
+float zeit = millis()/(60000.0);
+writeToSD("tlogg.txt",temperatur,zeit,0);
+Serial.println(temperatur,3);
+Serial.println(zeit,3);
 
-  	for(int16_t i=0; i<display.height()/2; i+=2) {
-  	  display.drawRect(i, i, display.width()-2*i, display.height()-2*i, WHITE);
-  	  display.display(); // Update screen with each newly-drawn rectangle
-  	  delay(1);
-  	}
-  	display.display();
-  	//printToOled("Volt:",voltageTEG,0,2);
+delay(PAUSE);
+
+	// //auslesen von Temperatur
+	// double temperatureHot = m_temperature(HOT);
+  	// Serial.println(temperatureHot);
+  	// delay(500);
+  	// //int voltageTEG = m_voltage(16);
+	
+  	// //Oled Testing
+  	// printToOled("TempH:",temperatureHot,1,1);
+  	// display.clearDisplay();
+
+  	// for(int16_t i=0; i<display.height()/2; i+=2) {
+  	//   display.drawRect(i, i, display.width()-2*i, display.height()-2*i, WHITE);
+  	//   display.display(); // Update screen with each newly-drawn rectangle
+  	//   delay(1);
+  	// }
+  	// display.display();
+  	// //printToOled("Volt:",voltageTEG,0,2);
   
 }
