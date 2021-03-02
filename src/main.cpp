@@ -51,8 +51,10 @@ auslesen der zyklusanzahl aus der sd karte
 #define CURRENT_TEG "0x40"		//definition der I2C Adresse, an dem das Modul angeschlosssen ist, welches den Strom am TEG misst
 #define VOLTAGE_FAN "0x41"	//definition des der I2C Adresse, an dem das Modul angeschlosssen ist, welches die spannung am Heizelement misst
 #define CURRENT_FAN "0x41"	//definition des der I2C Adresse, an dem das Modul angeschlosssen ist, welches den Strom am Heizelement misst
-#define VOLTAGE_MPPT "0x44"	//definition des der I2C Adresse, an dem das Modul angeschlosssen ist, welches die spannung am Heizelement misst
-#define CURRENT_MPPT "0x44"	//definition des der I2C Adresse, an dem das Modul angeschlosssen ist, welches den Strom am Heizelement misst
+#define VOLTAGE_MPPT "0x44"	//definition des der I2C Adresse, an dem das Modul angeschlosssen ist, welches die spannung am MPPT misst
+#define CURRENT_MPPT "0x44"	//definition des der I2C Adresse, an dem das Modul angeschlosssen ist, welches den Strom am MPPT misst
+#define VOLTAGE_BATT "0x45"	//definition des der I2C Adresse, an dem das Modul angeschlosssen ist, welches die spannung am MPPT misst
+#define CURRENT_BATT "0x45"	//definition des der I2C Adresse, an dem das Modul angeschlosssen ist, welches den Strom am MPPT misst
 
 
 //thermocouple pin defines
@@ -82,7 +84,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 Adafruit_INA219 ina219_0x40;//(0x40);//I2C Adresse: 0x40 Standardadresse
 Adafruit_INA219 ina219_0x41(0x41);//I2C Adresse: 0x41 Lötbrücke A0 (https://arduino-projekte.webnode.at/meine-libraries/stromsensor-ina219/)
 Adafruit_INA219 ina219_0x44(0x44);//I2C Adresse: 0x44 Lötbrücke A1
-Adafruit_INA219 ina219_0x45();
+Adafruit_INA219 ina219_0x45(0x45);//I2C Adresse: 0x44 Lötbrücke A1 und A0
 //muss eventuell noch aufgrund von mehrfachverwendung von SPI umgeschrieben werden, siehe Readme at: https://github.com/SirUli/MAX6675 
 MAX6675 tempCold(TEMP_COLD_SCK, TEMP_COLD_CS , TEMP_COLD_SO);
 MAX6675 tempHot(TEMP_HOT_SCK, TEMP_HOT_CS, TEMP_HOT_SO);
@@ -136,9 +138,11 @@ void setup() {
 	ina219_0x40.begin();  // Initialize first board (default address 0x40)
   	ina219_0x41.begin();  // Initialize second board with the address 0x41
 	ina219_0x44.begin();  // Initialize third board with the address 0x44
+	ina219_0x45.begin();  // Initialize fourth board with the address 0x45
 	ina219_0x40.setCalibration_32V_1A();  // calibrate first board (default address 0x40)
   	ina219_0x41.setCalibration_32V_1A();  // calibrate second board with the address 0x41
 	ina219_0x44.setCalibration_32V_1A();  // calibrate third board with the address 0x44
+	ina219_0x45.setCalibration_32V_1A();  // calibrate fourth board with the address 0x45
 	
 	return;
 }
@@ -162,6 +166,12 @@ shuntvoltage = ina219_0x41.getShuntVoltage_mV();
 	if(strcmp(pin, "0x44")==0 ){
 shuntvoltage = ina219_0x44.getShuntVoltage_mV();
   	busvoltage = ina219_0x44.getBusVoltage_V();
+  	voltage = busvoltage + (shuntvoltage / 1000);
+	return voltage;
+	}
+	if(strcmp(pin, "0x45")==0 ){
+shuntvoltage = ina219_0x45.getShuntVoltage_mV();
+  	busvoltage = ina219_0x45.getBusVoltage_V();
   	voltage = busvoltage + (shuntvoltage / 1000);
 	return voltage;
 	}
@@ -192,6 +202,11 @@ float m_current(const char *pin) {//Funktion zum auslesen des Stromes von einem 
 		if(strcmp(pin, "0x44")==0 ){
   float current_mA = 0;
   current_mA = ina219_0x44.getCurrent_mA();
+  return current_mA;
+	}
+	if(strcmp(pin, "0x45")==0 ){
+  float current_mA = 0;
+  current_mA = ina219_0x45.getCurrent_mA();
   return current_mA;
 	}
 	else  return -1;
@@ -229,7 +244,7 @@ float m_temperature(int type) {//Funktion zum auslesen der temperatur von einem 
 }
 
 
-void writeToSD(const char *dataName, float data1, float data2, float data3, float data4, float data5, float data6, float data7, float data8){ //Funktion zum Schreiben von Werten (Data1,...) auf die SD-Karte auf eine Datei (dataName) 
+void writeToSD(const char *dataName, float data1, float data2, float data3, float data4, float data5, float data6, float data7, float data8, float data9, float data10){ //Funktion zum Schreiben von Werten (Data1,...) auf die SD-Karte auf eine Datei (dataName) 
 	//Quelle: https://electronicshobbyists.com/arduino-sd-card-shield-tutorial-arduino-data-logger/ am 14.8.2020
 	 
 	sdcard_file = SD.open(dataName, FILE_WRITE); //Looking for the data.txt in SD card
@@ -255,6 +270,10 @@ void writeToSD(const char *dataName, float data1, float data2, float data3, floa
 		dataString += String(data7);
 		dataString += dataSeparation;
 		dataString += String(data8);
+		dataString += dataSeparation;
+		dataString += String(data9);
+		dataString += dataSeparation;
+		dataString += String(data10);
 		dataString += "\n";
 		sdcard_file.println(dataString); //Schreiben der beiden Datenreihen auf SD-Karte mit einem Bestrich als Seperator
 		sdcard_file.close(); //Closing the file
@@ -263,7 +282,7 @@ void writeToSD(const char *dataName, float data1, float data2, float data3, floa
 	}
 }
 
-void writeToSerial(const char *dataName, float data1, float data2, float data3, float data4, float data5, float data6, float data7, float data8){ //Funktion zum Schreiben von Werten (Data1,...) auf die SD-Karte auf eine Datei (dataName) 
+void writeToSerial(const char *dataName, float data1, float data2, float data3, float data4, float data5, float data6, float data7, float data8, float data9, float data10){ //Funktion zum Schreiben von Werten (Data1,...) auf die SD-Karte auf eine Datei (dataName) 
 	//Quelle: https://electronicshobbyists.com/arduino-sd-card-shield-tutorial-arduino-data-logger/ am 14.8.2020
 	 
 	
@@ -288,6 +307,10 @@ void writeToSerial(const char *dataName, float data1, float data2, float data3, 
 		dataString += String(data7);
 		dataString += dataSeparation;
 		dataString += String(data8);
+		dataString += dataSeparation;
+		dataString += String(data9);
+		dataString += dataSeparation;
+		dataString += String(data10);
 		dataString += "\n";
 		Serial.println(dataString); //Schreiben der beiden Datenreihen auf SD-Karte mit einem Bestrich als Seperator
 		
@@ -444,9 +467,11 @@ float voltageMPPT = m_voltage(VOLTAGE_MPPT);
 float currentMPPT = m_current(CURRENT_MPPT);
 float voltageFan = m_voltage(VOLTAGE_FAN);
 float currentFan = m_current(CURRENT_FAN);
+float voltageBatt = m_voltage(VOLTAGE_BATT);
+float currentBatt = m_current(CURRENT_BATT);
 
-writeToSD(FileName, temperatureHot, temperatureCold, voltageTeg, currentTeg, voltageMPPT, currentMPPT, voltageFan, currentFan);
-writeToSerial(FileName,temperatureHot, temperatureCold, voltageTeg, currentTeg, voltageMPPT, currentMPPT, voltageFan, currentFan);
+writeToSD(FileName, temperatureHot, temperatureCold, voltageTeg, currentTeg, voltageMPPT, currentMPPT, voltageFan, currentFan, voltageBatt, currentBatt);
+writeToSerial(FileName,temperatureHot, temperatureCold, voltageTeg, currentTeg, voltageMPPT, currentMPPT, voltageFan, currentFan, voltageBatt, currentBatt);
 //oled
 display.clearDisplay();
 display.print(temperatureHot);
