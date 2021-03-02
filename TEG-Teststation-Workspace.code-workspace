@@ -2,11 +2,7 @@
 	"folders": [
 		{
 			"name": "TEG-Teststation",
-			"path": ".."
-		},
-		{
-			"name": "201123-202132-megaatmega2560",
-			"path": "..\\..\\..\\..\\Dokumente\\PlatformIO\\Projects\\201123-202132-megaatmega2560"
+			"path": "."
 		}
 	],
 	"settings": {}
